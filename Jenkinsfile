@@ -1,6 +1,7 @@
 pipeline {
     agent any
 
+    
     environment {
         ImageRegistry = 'johnitopaisah'
         EC2_IP = '3.89.197.101'
