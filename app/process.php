@@ -42,7 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] == 0) {
         $s3 = new S3Client([
             'version' => 'latest',
-            'region'  => $_ENV['AWS_DEFAULT_REGION']
+            'region'  => $_ENV['AWS_DEFAULT_REGION'],
+            'credentials' => [
+                'key'    => $_ENV['AWS_ACCESS_KEY_ID'],
+                'secret' => $_ENV['AWS_SECRET_ACCESS_KEY']
+            ]
         ]);
 
         $bucket = $_ENV['S3_BUCKET_NAME'];
@@ -50,16 +54,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $file_path = $_FILES['attachment']['tmp_name'];
 
         try {
+            // Check if the bucket exists and create if not
+            if (!$s3->doesBucketExist($bucket)) {
+                $s3->createBucket(['Bucket' => $bucket]);
+                $s3->waitUntil('BucketExists', ['Bucket' => $bucket]);
+            }
+
+            // Upload the file
             $result = $s3->putObject([
-                'Bucket' => $bucket,
-                'Key'    => $key,
+                'Bucket'     => $bucket,
+                'Key'        => $key,
                 'SourceFile' => $file_path,
-                //'ACL'    => 'public-read' // Optional: adjust permissions as needed
+                //'ACL'        => 'public-read' // Optional
             ]);
             $attachment = $result['ObjectURL'];
         } catch (Exception $e) {
-            echo "There was an error uploading the file.\n";
+            echo "There was an error uploading the file.<br>";
             echo $e->getMessage();
+            exit;
         }
     }
 
